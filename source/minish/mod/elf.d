@@ -154,10 +154,28 @@ public:
 			A symbol.
 	*/
 	override Symbol findSymbol(string name) {
+		if (name.length < 1)
+			return Symbol.init;
+		
+		// Handle trailing underscore, some compilers generate
+		// it.
+		if (name[0] == '_')
+			name = name[1..$];
+
 		foreach(sym; symtab) {
 			uint st_name = sym.st_name.toNativeEndian(el);
 			uint st_value = sym.st_value.toNativeEndian(el);
-			string symname = cast(string)(strtab+st_name).fromStringz();
+			if (st_name == STN_UNDEF)
+				continue;
+
+			string symname = cast(string)(&strtab[st_name]).fromStringz();
+			if (symname.length < 1)
+				continue;
+		
+			// Handle trailing underscore, some compilers generate
+			// it.
+			if (symname[0] == '_')
+				symname = symname[1..$];
 
 			if (symname == name) {
 				return Symbol(

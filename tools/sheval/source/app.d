@@ -22,7 +22,7 @@ int main(string[] args) {
 		.summary("Evaluate SuperH machine code")
 		.author("Luna the Foxgirl")
 		.add(new Option("m", "cpu", "The CPU to simulate").acceptsValues(getCPUNames()))
-		.add(new Option("e", "entry", "The program's entry point").defaultValue("_start"))
+		.add(new Option("e", "entry", "The program's entry point").defaultValue("start"))
 		.add(new Option(null, "memory", "Size of the address space").defaultValue("16 MiB"))
 		.add(new Argument("path", "Path to ELF file to execute"))
 		.parse(args);
@@ -43,6 +43,6 @@ int main(string[] args) {
 
 	cpu.GPR(15) = 0x0000FFFF;
 	cpu.load(mod);
-	writeln(cpu.eval(entry.vaddr)[0]);
+	writeln(cast(int)cpu.eval(entry.vaddr)[0]);
 	return 0;
 }
