@@ -1,203 +1,80 @@
 module minish.cpu;
+import minish.core.registry;
+import minish.core.endian;
+import minish.mod;
 import minish.mem;
-import minish.inst;
-import minish.sink;
-import minish.endian;
 
-public import minish.cpus;
-
-/// Bit offset of the T bit.
-enum SH_T_BIT = 1;
-
-/// Bit offset of the Q bit.
-enum SH_Q_BIT = 8;
-
-/// Bit offset of the M bit.
-enum SH_M_BIT = 9;
+import minish.sh.cpus;
 
 /**
-	A SuperH processor.
-*/
-abstract class SHCPU {
-private:
-	uint delaySlot_;
-	bool shle;
+	A virtual CPU.
 
+	This provides a generic and safe interface to more specialized
+	virtual CPU implementations.
+*/
+abstract class CPU {
 protected:
 
 	/**
-		Gets the next instruction in the instruction stream.
-
-		Returns:
-			The next instruction in the instruction stream.
+		Instruction queue
 	*/
-	final ushort nextInstruction() {
-		uint addr = PC;
-		if (delaySlot_ != 0) {
+	InstructionQueue iqueue;
 
-			// NOTE:	Delay slot execution will still increase the program
-			//			counter, work around this by decreasing the PC by 2.
-			addr = delaySlot_;
-			PC -= 2;
-		}
+	/**
+		The memory controller of the CPU.
+	*/
+	MemoryController controller;
 
-		this.delaySlot_ = 0;
-		return this.read!ushort(addr);
+	/**
+		Constructs a new CPU.
+
+		Params:
+			mem = The memory controller
+	*/
+	this(MemoryController mem) {
+		this.controller = mem;
 	}
 
 	/**
-		Constructs a new SuperH CPU.
-
-		Params:
-			mem = The memory controller to instantiate with.
+		Gets the next instruction from the instruction queue.
 	*/
-	this(SHMemory mem, bool isLittleEndian) {
-		this.shle = isLittleEndian;
-		this.memory = mem;
+	final uint getNextInstruction() {
+		if (iqueue.length > 0)
+			return iqueue.next();
+		return 0;
+	}
+
+	/**
+		Adds the given instruction to the instruction queue.
+	*/
+	final void addToQueue(uint instr) {
+		this.iqueue.add(instr);
 	}
 
 public:
 
-	/// Memory Controller.
-	SHMemory memory;
-
-	/// General Purpose Register
-	int[16] R;
-
-	/// Program Counter
-	uint PC = 0xA0000000;
-
-	/// Saved Program Counter
-	uint SPC;
-	
-	/// Status Register
-	uint SR;
-
-	/// Saved Status Register
-	uint SSR;
-
-	/// Floating Point Status Register
-	uint FPSCR;
-
-	/// Global Base Register
-	uint GBR;
-
-	/// Vector Base Register
-	uint VBR = 0x00000000;
-
-	/// Saved General Register 15
-	uint SGR;
-
-	/// Debug Base Register
-	uint DBR;
-
-	/// Multiply-and-accumulate Register
-	uint MACL;
-	uint MACH; /// ditto
-
-	/// Procedure Register
-	uint PR;
-
 	/**
-		Utility function that gets the stack pointer.
+		The memory attached to the CPU.
 	*/
-	@property ref int SP() => R[15];
-
-	/**
-		Utility function that gets the frame pointer.
-	*/
-	@property ref int FP() => R[14];
-
-	/// The status register's T bit.
-	@property ubyte T() => getbit!SH_T_BIT(SR);
-	@property void T(ubyte value) => setbit!SH_T_BIT(SR, value);
-
-	/// The status register's M bit.
-	@property ubyte M() => getbit!SH_M_BIT(SR);
-	@property void M(ubyte value) => setbit!SH_M_BIT(SR, value);
-
-	/// The status register's Q bit.
-	@property ubyte Q() => getbit!SH_Q_BIT(SR);
-	@property void Q(ubyte value) => setbit!SH_Q_BIT(SR, value);
+	final @property MemoryController memory() => controller;
 
 	/**
 		Whether the processor is little endian.
 	*/
-	@property bool isLittleEndian() => shle;
+	abstract @property bool isLittleEndian();
 
 	/**
-		Whether the delay slot is filled.
+		The virtual CPU's program counter.
 	*/
-	@property bool isDelaySlotFilled() => delaySlot_ != 0;
+	abstract @property ref uint programCounter();
 
 	/**
-		The address that will be executed in the next step cycle.
-	*/
-	@property uint execAddr() {
-		return 	delaySlot_ != 0 ? 
-				delaySlot_ : 
-				PC;
-	}
-
-	/**
-		Reads value at given address if possible.
+		Loads a module into the CPU's address space.
 
 		Params:
-			addr = The address to read from.
-
-		Returns:
-			The value at that address or $(D T.init).
+			mod = The module to load.
 	*/
-	T read(T)(uint addr) {
-		if (auto v = memory.getAddress!T(addr))
-			return (*v).toNativeEndian(shle);
-		return T.init;
-	}
-
-	/**
-		Writes the value to the given address.
-
-		Params:
-			addr = 	The address to write to.
-			value =	The value to write.
-	*/
-	void write(T, Y)(uint addr, Y value) {
-		if (auto v = memory.getAddress!T(addr)) {
-			static if (is(T == Y))
-				*v = value.toOtherEndian(shle);
-			else
-				*v = (*cast(T*)&value).toOtherEndian(shle);
-		}
-	}
-
-	/**
-		Loads the given buffer into the given address.
-
-		Params:
-			buffer = 	the buffer to load.
-			addr =		The address to load the buffer at.
-
-		Returns:
-			$(D true) if the buffer could be loaded,
-			$(D false) otherwise.
-	*/
-	bool load(ubyte[] buffer, uint addr) {
-		if (memory.doesBufferFit(cast(uint)buffer.length, addr)) {
-			memory.getAddress!ubyte(addr)[0..buffer.length] = buffer[0..$];
-			return true;
-		}
-		return false;
-	}
-
-	/**
-		Adds the given address to the delay slot.
-
-		Params:
-			addr = Address of the next instruction.
-	*/
-	void delaySlot(uint addr) {
-		this.delaySlot_ = addr;
-	}
+	abstract void load(Module mod);
 
 	/**
 		Executes a single CPU step.
@@ -207,66 +84,151 @@ public:
 	*/
 	abstract bool step();
 
-    /**
-        Disassembles the instruction at the given address.
-
-        Params:
-            addr = The address to disassemble.
-            sink = The sink to disassemble to.
-    */
-    abstract void disassemble(uint addr, ISink sink);
-
 	/**
-		Allows setting the status register.
+		Runs the CPU from the given address until it
+		returns to address 0.
 
 		Params:
-			value = The value to set the status register to.
-	*/
-	void setSR(uint value) {
-		this.SR = value;
-	}
+			addr = The address of the function to execute.
 
-	/// Prints the CPU state as a string.
-	override
-	string toString() const {
-		import std.format : format;
-		return (
-			"  r0=%.8x   r1=%.8x   r2=%.8x   r3=%.8x   r4=%.8x   r5=%.8x   r6=%.8x   r7=%.8x\n" ~
-			"  r8=%.8x   r9=%.8x  r10=%.8x  r11=%.8x  r12=%.8x  r13=%.8x  r14=%.8x  r15=%.8x\n" ~
-			"  pc=%.8x   pr=%.8x   sr=%.8x  gbr=%.8x  vbr=%.8x  dbr=%.8x\n" ~
-			"mach=%.8x macl=%.8x"
-		).format(
-			R[0],  R[1],  R[2],  R[3],  R[4],  R[5],  R[6],  R[7],
-			R[8],  R[9], R[10], R[11], R[12], R[13], R[14], R[15],
-			PC,    PR,   SR,    GBR,   VBR,   DBR,
-			MACH,  MACL, 
-		);
+		Returns:
+			The values of all the general purpose registers at the
+			end of execution.
+	*/
+	abstract ulong[] eval(uint addr);
+
+	/**
+		Gets a reference to the data of a general purpose
+		register.
+
+		Params:
+			i = The index of the register.
+
+		Returns:
+			A reference to the GPR register's data.
+	*/
+	abstract ref int GPR(ubyte i);
+
+	/**
+		Gets a reference to the data of a floating point
+		register.
+
+		Params:
+			i = The index of the register.
+
+		Returns:
+			A reference to the FPR register's data.
+	*/
+	abstract ref float FPR(ubyte i);
+
+	/**
+		Adds a device to the CPU's memory map.
+
+		Params:
+			device = The device to add.
+	*/
+	final void addDevice(DMADevice device) {
+		controller.attachDevice(device);
 	}
 }
 
 /**
-	Gets a bit in a given value.
+	An instruction queue, used by a CPU to enqueue instructions for
+	delay slots and pipelines.
+*/
+struct InstructionQueue {
+private:
+	uint[16] queueElements;
+	uint ptr;
 
+public:
+
+	/**
+		The length of the current queue.
+	*/
+	@property uint length() => ptr;
+
+	/**
+		Gets the next instruction in the stream.
+	*/
+	uint next() {
+		return queueElements[--ptr];
+	}
+
+	/**
+		Adds instruction to the queue.
+
+		Params:
+			instr = The instruction to add.
+	*/
+	void add(uint instr) {
+		queueElements[ptr++] = instr;
+	}
+
+	/**
+		Resets the instruction queue.
+	*/
+	void reset() {
+		this.ptr = 0;
+	}
+}
+
+/**
+	Registered virtual CPUs
+*/
+__gshared TypeRegistry!(CPU, uint) CPUs;
+
+/**
+	Creates the given CPU
+	
 	Params:
-		src = The source to get the bit in.
+		cpu = 			The name of the CPU family to create.
+		memorySize =	The size of the main memory.
+*/
+CPU createCPU(string cpu, uint memorySize) {
+	return CPUs.create(cpu, memorySize);
+}
+
+/**
+	Gets all the registered virtual CPUs with the emulation
+	engine.
 
 	Returns:
-		The value of the bit at that location.
+		The registered types.
 */
-pragma(inline, true)
-bool getbit(uint offset, T)(ref T src) {
-	return src>>offset & 1;
+auto getCPUs() {
+	return CPUs.registeredTypes;
 }
 
 /**
-	Gets a bit in a given value.
+	Gets the names of all of the registered 
+	virtual CPUs with the emulation engine.
+
+	Returns:
+		The names of the registered CPUs.
+*/
+string[] getCPUNames() {
+	string[] result;
+	foreach(cpu; CPUs.registeredTypes)
+		result ~= cpu.name;
+	return result;
+}
+
+/**
+	Gets whether a CPU with the following name is registered
+	with minish.
 
 	Params:
-		src = 	The source to get the bit in.
-		value =	The value to set the bit to.
+		name = The name to look up.
+
+	Returns:
+		$(D true) if the CPU is valid,
+		$(D false) otherwise.
 */
-pragma(inline, true)
-void setbit(uint offset, T)(ref T src, uint value) {
-	enum uint MASK = (1U<<offset);
-	src = (src & ~MASK) | (cast(uint)value << offset);
+bool hasCPU(string name) {
+	foreach(cpu; CPUs.registeredTypes) {
+		if (cpu.name == name)
+			return true;
+	}
+	return false;
 }

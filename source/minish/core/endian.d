@@ -1,4 +1,4 @@
-module minish.endian;
+module minish.core.endian;
 import std.bitmanip;
 
 /**

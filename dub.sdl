@@ -5,3 +5,5 @@ copyright "Copyright © 2026, Luna"
 license "BSD-2-Clause"
 
 targetPath "out/"
+
+subPackage "tools/sheval"

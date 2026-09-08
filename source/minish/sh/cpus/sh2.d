@@ -1,7 +1,9 @@
-module minish.cpus.sh2;
-import minish.inst;
+module minish.sh.cpus.sh2;
+import minish.sh.inst;
+import minish.sh.cpu;
+import minish.sh.mem;
+import minish.core.registry;
 import minish.cpu;
-import minish.mem;
 
 /**
     A SH2 CPU.
@@ -16,12 +18,14 @@ public:
             memSize = The size of the main memory, in bytes.
     */
     this(uint memSize, bool isLittleEndian) {
-        super(new SHMemory(memSize, false), isLittleEndian);
+        super(new SHMemory(memSize), isLittleEndian);
     }
 
     // Generate the instruction set.
     mixin GenInstrSelect!(SH2Inst);
 }
+mixin RegisterType!(CPUs, SH2CPU, "sh2", (uint size) => new SH2CPU(size, false));
+mixin RegisterType!(CPUs, SH2CPU, "sh2l", (uint size) => new SH2CPU(size, true));
 
 __gshared const immutable(SHInst)[] SH2Inst = [
 
@@ -816,11 +820,11 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpM4!("LDCSR",       "ldc Rm,sr",                0b0100000000001110, (SHCPU cpu, int m) {
-        cpu.setSR(cpu.R[m]);
+        cpu.SR = cpu.R[m];
         cpu.PC += 2;
     }),
     OpM4!("LDCMSR",      "ldc.l @Rm+,sr",            0b0100000000000111, (SHCPU cpu, int m) {
-        cpu.setSR(cpu.read!uint(cpu.R[m]));
+        cpu.SR = cpu.read!uint(cpu.R[m]);
         cpu.R[m] += 4;
         cpu.PC += 2;
     }),

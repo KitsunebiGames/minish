@@ -1,141 +1,260 @@
 module minish.mem;
 
-enum P0ADDR = 0x00000000u;
-enum P1ADDR = 0x80000000u;
-enum P2ADDR = 0xA0000000u;
-enum P3ADDR = 0xC0000000u;
-enum P4ADDR = 0xE0000000u;
-
 /**
-	SH1-4 Memory Unit.
+	A virtual memory controller.
 */
-class SHMemory {
+abstract class MemoryController {
 private:
-	ubyte[] memory;
+	DMADevice[] devices_;
 
-	// 64 megabytes of control register data
-	ubyte[67_108_863] ctrlregs;
-
-	uint toP0Area(uint addr) {
-		if (addr >= P4ADDR)
-			return P4ADDR-addr;
-		else if (addr >= P3ADDR)
-			return P3ADDR-addr;
-		else if (addr >= P2ADDR)
-			return P2ADDR-addr;
-		else if (addr >= P1ADDR)
-			return P1ADDR-addr;
-		else
-			return addr;
-	}
-
-	uint translateAddr(uint addr) {
-		return toP0Area(addr) % memory.length;
-	}
-
-	uint getPArea(uint addr) {
-		if (addr >= P4ADDR)
-			return P4ADDR;
-		else if (addr >= P3ADDR)
-			return P3ADDR;
-		else if (addr >= P2ADDR)
-			return P2ADDR;
-		else if (addr >= P1ADDR)
-			return P1ADDR;
-		else
-			return P0ADDR;
-	}
-
-public:
+protected:
 
 	/**
-		The underlying memory managment unit, if any is present.
-	*/
-	SHMMU mmu;
-
-	/**
-		Constructs a new SH memory controller
+		Reads data from the given address.
 
 		Params:
-			memSize = 	The size of main memory.
-			hasMMU = 	Whether a MMU is present.
-	*/
-	this(uint memSize, bool hasMMU=false) {
-		this.memory = new ubyte[memSize];
-		if (hasMMU)
-			this.mmu = new SHMMU(this);
-	}
-
-	/**
-		Gets the given address in memory.
-
-		Params:
-			addr = The 32-bit address to get.
+			addr = 		The address to read.
+			length =	The length of the data.
 
 		Returns:
-			The data at the address, or $(D null) if
-			the memory is outside of the address space.
+			The data at the address.
 	*/
-	T* getAddress(T)(uint addr) {
-
-		// Control Registers
-		if (addr >= 0xFC000000)
-			return cast(T*)&ctrlregs[addr-0xFC000000];
-
-		// Translate from P1+ to P0 area.
-		addr = translateAddr(addr);
-
-		// Normal addresses.
-		if (addr+T.sizeof < memory.length)
-			return cast(T*)&memory[addr];
-		return null;
-	}
+	abstract void[] onRead(uint addr, uint length);
 
 	/**
-		Gets whether a buffer of the given size will fit at the 
-		given address.
+		Write the given data to the given address in
+		memory.
 
 		Params:
-			bufSize = 	Size of buffer in bytes.
-			addr = 		Address the buffer would be loaded at.
+			addr = The address to write
+			data = The data to write.
 	*/
-	bool doesBufferFit(uint bufSize, uint addr) {
-		
-		// Cross area borders.
-		if (getPArea(addr) != getPArea(addr+bufSize))
-			return false;
-
-		addr = translateAddr(addr);
-		return addr+bufSize < memory.length;
-	}
-}
-
-/**
-	A SuperH Memory Managment Unit.
-
-	Emulates the memory managment unit in some SH chips.
-*/
-class SHMMU {
-private:
-	SHMemory mem;
+	abstract void onWrite(uint addr, void[] data);
 
 public:
 
 	/**
-		Constructs a new MMU:
+		The devices loaded in to the memory controller's
+		address space. 
+	*/
+	@property DMADevice[] devices() => devices_;
+
+	/**
+		Gets whether the given address is in DMA range.
 
 		Params:
-			mem = The memory controller.
+			addr = The address to check
+
+		Returns:
+			$(D true) if the address is in DMA range,
+			$(D false) otherwise.
 	*/
-	this(SHMemory mem) {
-		this.mem = mem;
+	abstract bool isInDMARange(uint addr);
+
+	/**
+		Gets whether the given buffer fits in to the given
+		address range.
+
+		Params:
+			addr = 		The start address of the range.
+			length =	Length of the buffer.
+
+		Returns:
+			$(D true) if the buffer fits,
+			$(D false) otherwise.
+	*/
+	abstract bool doesBufferFit(uint addr, uint length);
+
+	/**
+		Reads data from the given address.
+
+		Params:
+			addr = The address to read.
+
+		Returns:
+			The data at the address.
+	*/
+	final void[] read(uint addr, uint length) {
+		if (isInDMARange(addr)) {
+			foreach(DMADevice dev; devices_) {
+				void[] data = dev.read(addr, length);
+				if (data.length != 0)
+					return data;
+			}
+
+			assert(0, "Failed to read from DMA devices!");
+			return null;
+		}
+		return this.onRead(addr, length);
+	}
+
+	/**
+		Write the given data to the given address in
+		memory.
+
+		Params:
+			addr = The address to write
+			data = The data to write.
+	*/
+	final void write(uint addr, void[] data) {
+		if (isInDMARange(addr)) {
+			foreach(DMADevice dev; devices_) {
+				if (dev.write(addr, data))
+					return;
+			}
+
+			assert(0, "Failed to write to DMA devices!");
+			return;
+		}
+
+		this.onWrite(addr, data);
+	}
+
+	/**
+		Attaches a device to the memory controller.
+
+		The device's DMA ranges must not interfere
+		with any existing devices attached.
+
+		Params:
+			device = The device to attach.
+	*/
+	void attachDevice(DMADevice device) {
+		foreach(DMADevice dev; devices_) {
+			if (!dev.canCoexistWith(device))
+				throw new Exception(dev.name~" and "~device.name~"are incompatible!");
+		}
+
+		this.devices_ ~= device;
 	}
 }
 
 /**
-	A SuperH Translation-Lookaside-Buffer
+	A virtual device mapped in to memory.
 */
-struct UTLBEntry {
-	ubyte ASID;
+abstract class DMADevice {
+public:
 
+	/**
+		Name of the device.
+	*/
+	abstract @property string name();
+
+	/**
+		The memory ranges the device is to be mapped to.
+	*/
+	abstract @property MemoryRange[] memoryRanges();
+
+	/**
+		Reads data from the given address.
+
+		Params:
+			addr = 		The address to read.
+			length =	Length of the buffer.
+
+		Returns:
+			The data at the address.
+	*/
+	abstract void[] read(uint addr, uint length);
+
+	/**
+		Write the given data to the given address in
+		memory.
+
+		Params:
+			addr = The address to write
+			data = The data to write.
+	
+		Returns:
+			$(D true) if the write succeeded,
+			$(D false) otherwise.
+	*/
+	abstract bool write(uint addr, void[] data);
+
+	/**
+		Gets whether this DMA device can coexist with
+		another device.
+
+		Params:
+			other = The other device.
+
+		Returns:
+			$(D true) if the devices can coexist,
+			$(D false) otherwise.
+	*/
+	bool canCoexistWith(DMADevice other) {
+		foreach(selfrange; memoryRanges) {
+			foreach(otherrange; other.memoryRanges) {
+				if (selfrange.overlapsWith(otherrange))
+					return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+		Gets whether this DMA device responds to the given
+		memory address.
+
+		Params:
+			other = The other device.
+
+		Returns:
+			$(D true) if the devices can coexist,
+			$(D false) otherwise.
+	*/
+	bool respondsToAddress(uint addr) {
+		foreach(selfrange; memoryRanges) {
+			if (selfrange.overlapsWith(addr))
+				return true;
+		}
+		return false;
+	}
+}
+
+/**
+	A memory mapping.
+*/
+struct MemoryRange {
+
+	/**
+		Start address of a memory range.
+	*/
+	uint start;
+
+	/**
+		End address of a memory range.
+	*/
+	uint end;
+
+	/**
+		Gets whether this memory range overlaps
+		with another.
+
+		Params:
+			other = The other range
+
+		Returns:
+			$(D true) if the ranges overlap,
+			$(D false) otherwise.
+	*/
+	bool overlapsWith(MemoryRange other) {
+		import std.algorithm : min, max;
+		return max(this.start, other.start) < min(this.end, other.end);
+	}
+
+	/**
+		Gets whether this memory range overlaps
+		with another.
+
+		Params:
+			addr = The address
+
+		Returns:
+			$(D true) if the ranges overlap,
+			$(D false) otherwise.
+	*/
+	bool overlapsWith(uint addr) {
+		return addr >= start && addr <= end;
+	}
 }
