@@ -30,16 +30,16 @@ public:
     }
 
     // Gets banked FR register
-    override ref float FS(int i) => FSR[(i + (16*FP_FR)) % 32];
+    override ref float FS(int i) => FSR[i];
 
     // Gets banked XF register
-    override ref float XS(int i) => FSR[((16*!FP_FR) + i) % 32];
+    override ref float XS(int i) => FSR[i];
 
     // Gets banked DR register
-    override ref double FD(int i) => FDR[(i + (8*FP_FR)) % 16];
+    override ref double FD(int i) => FDR[i];
 
     // Gets banked XD register
-    override ref double XD(int i) => FDR[((8*!FP_FR) + i) % 16];
+    override ref double XD(int i) => FDR[i];
 
     /**
         Gets a reference to the data of a floating point

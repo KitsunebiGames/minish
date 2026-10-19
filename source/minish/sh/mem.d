@@ -16,13 +16,13 @@ private:
 
 	uint toP0Area(uint addr) {
 		if (addr >= P4ADDR)
-			return P4ADDR-addr;
+			return addr-P4ADDR;
 		else if (addr >= P3ADDR)
-			return P3ADDR-addr;
+			return addr-P3ADDR;
 		else if (addr >= P2ADDR)
-			return P2ADDR-addr;
+			return addr-P2ADDR;
 		else if (addr >= P1ADDR)
-			return P1ADDR-addr;
+			return addr-P1ADDR;
 		else
 			return addr;
 	}
@@ -65,7 +65,8 @@ protected:
 	*/
 	override
 	void[] onRead(uint addr, uint length) {
-		return this.getAddress(addr)[0..length];
+		ubyte* src = cast(ubyte*)this.getAddress(addr);
+		return src[0..length];
 	}
 
 	/**
@@ -78,7 +79,8 @@ protected:
 	*/
 	override
 	void onWrite(uint addr, void[] data) {
-		this.getAddress(addr)[0..data.length] = data[0..$];
+		ubyte* dst = cast(ubyte*)this.getAddress(addr);
+		dst[0..data.length] = cast(ubyte[])data[0..data.length];
 	}
 
 public:

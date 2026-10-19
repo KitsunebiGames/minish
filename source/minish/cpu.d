@@ -77,7 +77,25 @@ public:
 			value =	The value to write.
 	*/
 	void write(T, Y)(uint addr, Y value) {
-		Y[1] v = [value.toOtherEndian(isLittleEndian)];
+		T[1] v = [(cast(T)value).toOtherEndian(isLittleEndian)];
+		memory.write(addr, v[0..$]);
+	}
+
+	/**
+		Writes the value to the given address.
+
+		Params:
+			addr = 	The address to write to.
+			value =	The value to write.
+	*/
+	void truncwrite(T, Y)(uint addr, Y value) {
+		union trunct {
+			Y value;
+			T trunc;
+		}
+
+		trunct tv = {value};
+		T[1] v = [tv.trunc.toOtherEndian(isLittleEndian)];
 		memory.write(addr, v[0..$]);
 	}
 

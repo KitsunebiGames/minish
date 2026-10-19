@@ -38,11 +38,12 @@ __gshared const immutable(SHInst)[] SH3Inst = SH2Inst~[
     //                                          Shift Instructions
     //
     OpN4M4!("SHAD",      "shad Rm,Rn",               0b0100000000001100, (SHCPU cpu, int m, int n) {
-        
-        if (cpu.R[m] < 0) {
+        int sgn = cpu.R[m] & 0x80000000;
+
+        if (sgn == 0) {
             cpu.R[n] <<= (cpu.R[m] & 0x1F);
         } else if ((cpu.R[m] & 0x1F) == 0) {
-            if ((cast(uint)cpu.R[n] & 0x80000000U) == 0)
+            if ((cpu.R[n] & 0x80000000) == 0)
                 cpu.R[n] = 0;
             else
                 cpu.R[n] = 0xFFFFFFFF;
@@ -53,13 +54,14 @@ __gshared const immutable(SHInst)[] SH3Inst = SH2Inst~[
         cpu.PC += 2;
     }),
     OpN4M4!("SHLD",      "shad Rm,Rn",               0b0100000000001101, (SHCPU cpu, int m, int n) {
-        
-        if (cpu.R[m] < 0) {
+        int sgn = cpu.R[m] & 0x80000000;
+
+        if (sgn == 0) {
             cpu.R[n] <<= (cpu.R[m] & 0x1F);
         } else if ((cpu.R[m] & 0x1F) == 0) {
             cpu.R[n] = 0;
         } else {
-            cpu.R[n] = cpu.R[n] >>> ((~cpu.R[m] & 0x1F) + 1);
+            cpu.R[n] = cast(uint)cpu.R[n] >>> ((~cpu.R[m] & 0x1F) + 1);
         }
 
         cpu.PC += 2;

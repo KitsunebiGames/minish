@@ -55,12 +55,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpN4D8!("MOVWI",     "mov.w @(disp,pc),Rn",      0b1001000000000000, (SHCPU cpu, int d, int n) {
         uint disp = cast(uint)(0x000000FF & d);
-        cpu.R[n] = cpu.read!ushort(cpu.PC + 4 + (disp << 1));
-        if ((cpu.R[n] & 0x8000) == 0)
-            cpu.R[n] &= 0x0000FFFF;
-        else
-            cpu.R[n] |= 0xFFFF0000;
-
+        cpu.R[n] = cpu.read!short(cpu.PC + 4 + (disp << 1));
         cpu.PC += 2;
     }),
     OpN4D8!("MOVLI",     "mov.l @(disp,pc),Rn",      0b1101000000000000, (SHCPU cpu, int d, int n) {
@@ -70,23 +65,29 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("MOVBL",     "mov.b @Rm,Rn",             0b0110000000000000, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!ubyte(cpu.R[m]);
+        byte data = cpu.read!byte(cpu.R[m]);
+        cpu.R[n] = data;
+
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWL",     "mov.w @Rm,Rn",             0b0110000000000001, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!ushort(cpu.R[m]);
+        short data = cpu.read!short(cpu.R[m]);
+        cpu.R[n] = data;
+
         cpu.PC += 2;
     }),
     OpN4M4!("MOVLL",     "mov.l @Rm,Rn",             0b0110000000000010, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!int(cpu.R[m]);
+        int data = cpu.read!int(cpu.R[m]);
+        cpu.R[n] = data;
+
         cpu.PC += 2;
     }),
     OpN4M4!("MOVBS",     "mov.b Rm,@Rn",             0b0010000000000000, (SHCPU cpu, int m, int n) {
-        cpu.write!ubyte(cpu.R[n], cpu.R[m]);
+        cpu.truncwrite!ubyte(cpu.R[n], cpu.R[m]);
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWS",     "mov.w Rm,@Rn",             0b0010000000000001, (SHCPU cpu, int m, int n) {
-        cpu.write!ushort(cpu.R[n], cpu.R[m]);
+        cpu.truncwrite!ushort(cpu.R[n], cpu.R[m]);
         cpu.PC += 2;
     }),
     OpN4M4!("MOVLS",     "mov.l Rm,@Rn",             0b0010000000000010, (SHCPU cpu, int m, int n) {
@@ -94,16 +95,16 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("MOVBP",     "mov.b @Rm+,Rn",            0b0110000000000100, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!ubyte(cpu.R[m]);
+        cpu.R[n] = cpu.read!byte(cpu.R[m]);
         if (n != m)
             cpu.R[m] += 1;
 
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWP",     "mov.w @Rm+,Rn",            0b0110000000000101, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!ushort(cpu.R[m]);
+        cpu.R[n] = cpu.read!short(cpu.R[m]);
         if (n != m)
-            cpu.R[m] += 1;
+            cpu.R[m] += 2;
         
         cpu.PC += 2;
     }),
@@ -115,12 +116,12 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("MOVBM",     "mov.b Rm,@-Rn",            0b0010000000000100, (SHCPU cpu, int m, int n) {
-        cpu.write!ubyte(cpu.R[n] - 1, cpu.R[m]);
+        cpu.truncwrite!ubyte(cpu.R[n] - 1, cpu.R[m]);
         cpu.R[n] -= 1;
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWM",     "mov.w Rm,@-Rn",            0b0010000000000101, (SHCPU cpu, int m, int n) {
-        cpu.write!ushort(cpu.R[n] - 2, cpu.R[m]);
+        cpu.truncwrite!ushort(cpu.R[n] - 2, cpu.R[m]);
         cpu.R[n] -= 2;
         cpu.PC += 2;
     }),
@@ -130,41 +131,44 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpM4D4!("MOVBL4",    "mov.b @(disp,Rm),r0",      0b1000010000000000, (SHCPU cpu, int m, int d) {
-        int disp = cast(int)(0x0000000F & d);
-        cpu.R[0] = cpu.read!ubyte(cpu.R[m] + disp);
+        int disp = cast(int)(0x0000000F & cast(int)d);
+        int data = cpu.read!byte(cpu.R[m] + disp);
+        cpu.R[0] = data;
         cpu.PC += 2;
     }),
     OpM4D4!("MOVWL4",    "mov.w @(disp,Rm),r0",      0b1000010100000000, (SHCPU cpu, int m, int d) {
-        int disp = cast(int)(0x0000000F & d);
-        cpu.R[0] = cpu.read!ushort(cpu.R[m] + (disp << 1));
+        int disp = cast(int)(0x0000000F & cast(int)d);
+        int data = cpu.read!short(cpu.R[m] + (disp << 1));
+        cpu.R[0] = data;
         cpu.PC += 2;
     }),
     OpN4M4D4!("MOVLL4",  "mov.l @(disp,Rm),Rn",      0b0101000000000000, (SHCPU cpu, int m, int d, int n) {
-        int disp = cast(int)(0x0000000F & d);
-        cpu.R[n] = cpu.read!int(cpu.R[m] + (disp << 2));
+        int disp = cast(int)(0x0000000F & cast(int)d);
+        int data = cpu.read!int(cpu.R[m] + (disp << 2));
+        cpu.R[n] = data;
         cpu.PC += 2;
     }),
     OpN4D4!("MOVBS4",    "mov.b r0,@(disp,Rn)",      0b1000000000000000, (SHCPU cpu, int d, int n) {
-        int disp = cast(int)(0x0000000F & d);
-        cpu.write!ubyte(cpu.R[n] + disp, cpu.R[0]);
+        int disp = cast(int)(0x0000000F & cast(int)d);
+        cpu.truncwrite!ubyte(cpu.R[n] + disp, cpu.R[0]);
         cpu.PC += 2;
     }),
     OpN4D4!("MOVWS4",    "mov.w r0,@(disp,Rn)",      0b1000000100000000, (SHCPU cpu, int d, int n) {
-        int disp = cast(int)(0x0000000F & d);
-        cpu.write!ushort(cpu.R[n] + (disp << 1), cpu.R[0]);
+        int disp = cast(int)(0x0000000F & cast(int)d);
+        cpu.truncwrite!ushort(cpu.R[n] + (disp << 1), cpu.R[0]);
         cpu.PC += 2;
     }),
     OpN4M4D4!("MOVLS4",  "mov.l Rm,@(disp,Rn)",      0b0001000000000000, (SHCPU cpu, int m, int d, int n) {
-        int disp = cast(int)(0x0000000F & d);
+        int disp = cast(int)(0x0000000F & cast(int)d);
         cpu.write!int(cpu.R[n] + (disp << 2), cpu.R[m]);
         cpu.PC += 2;
     }),
     OpN4M4!("MOVBL0",    "mov.b @(r0,Rm),Rn",        0b0000000000001100, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!ubyte(cpu.R[m] + cpu.R[0]);
+        cpu.R[n] = cpu.read!byte(cpu.R[m] + cpu.R[0]);
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWL0",    "mov.w @(r0,Rm),Rn",        0b0000000000001101, (SHCPU cpu, int m, int n) {
-        cpu.R[n] = cpu.read!ushort(cpu.R[m] + cpu.R[0]);
+        cpu.R[n] = cpu.read!short(cpu.R[m] + cpu.R[0]);
         cpu.PC += 2;
     }),
     OpN4M4!("MOVLL0",    "mov.l @(r0,Rm),Rn",        0b0000000000001110, (SHCPU cpu, int m, int n) {
@@ -172,11 +176,11 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4D4!("MOVBS0",    "mov.b Rm,@(r0,Rn)",        0b0000000000000100, (SHCPU cpu, int m, int n) {
-        cpu.write!ubyte(cpu.R[n] + cpu.R[0], cpu.R[m]);
+        cpu.truncwrite!ubyte(cpu.R[n] + cpu.R[0], cpu.R[m]);
         cpu.PC += 2;
     }),
     OpN4D4!("MOVWS0",    "mov.w Rm,@(r0,Rn)",        0b0000000000000101, (SHCPU cpu, int m, int n) {
-        cpu.write!ushort(cpu.R[n] + cpu.R[0], cpu.R[m]);
+        cpu.truncwrite!ushort(cpu.R[n] + cpu.R[0], cpu.R[m]);
         cpu.PC += 2;
     }),
     OpN4M4!("MOVLS0",    "mov.l Rm,@(r0,Rn)",        0b0000000000000110, (SHCPU cpu, int m, int n) {
@@ -185,12 +189,12 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpD8!("MOVBLG",      "mov.b @(disp,gbr),r0",     0b1100010000000000, (SHCPU cpu, int d) {
         int disp = cast(int)(0x000000FF & d);
-        cpu.R[0] = cpu.read!ubyte(cpu.GBR + disp);
+        cpu.R[0] = cpu.read!byte(cpu.GBR + disp);
         cpu.PC += 2;
     }),
     OpD8!("MOVWLG",      "mov.w @(disp,gbr),r0",     0b1100010100000000, (SHCPU cpu, int d) {
         int disp = cast(int)(0x000000FF & d);
-        cpu.R[0] = cpu.read!ushort(cpu.GBR + (disp << 1));
+        cpu.R[0] = cpu.read!short(cpu.GBR + (disp << 1));
         cpu.PC += 2;
     }),
     OpD8!("MOVLLG",      "mov.l @(disp,gbr),r0",     0b1100011000000000, (SHCPU cpu, int d) {
@@ -200,12 +204,12 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpD8!("MOVBSG",      "mov.b r0,@(disp,gbr)",     0b1100000000000000, (SHCPU cpu, int d) {
         int disp = cast(int)(0x000000FF & d);
-        cpu.write!ubyte(cpu.GBR + disp, cpu.R[0]);
+        cpu.truncwrite!ubyte(cpu.GBR + disp, cpu.R[0]);
         cpu.PC += 2;
     }),
     OpD8!("MOVWSG",      "mov.w r0,@(disp,gbr)",     0b1100000100000000, (SHCPU cpu, int d) {
         int disp = cast(int)(0x000000FF & d);
-        cpu.write!ushort(cpu.GBR + disp, cpu.R[0]);
+        cpu.truncwrite!ushort(cpu.GBR + disp, cpu.R[0]);
         cpu.PC += 2;
     }),
     OpD8!("MOVLSG",      "mov.l r0,@(disp,gbr)",     0b1100001000000000, (SHCPU cpu, int d) {
