@@ -71,20 +71,10 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpN4M4!("MOVBL",     "mov.b @Rm,Rn",             0b0110000000000000, (SHCPU cpu, int m, int n) {
         cpu.R[n] = cpu.read!ubyte(cpu.R[m]);
-        if ((cpu.R[n] & 0x80) == 0)
-            cpu.R[n] &= 0x000000FF;
-        else
-            cpu.R[n] |= 0xFFFFFF00;
-
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWL",     "mov.w @Rm,Rn",             0b0110000000000001, (SHCPU cpu, int m, int n) {
         cpu.R[n] = cpu.read!ushort(cpu.R[m]);
-        if ((cpu.R[n] & 0x80) == 0)
-            cpu.R[n] &= 0x0000FFFF;
-        else
-            cpu.R[n] |= 0xFFFF0000;
-        
         cpu.PC += 2;
     }),
     OpN4M4!("MOVLL",     "mov.l @Rm,Rn",             0b0110000000000010, (SHCPU cpu, int m, int n) {
@@ -105,11 +95,6 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpN4M4!("MOVBP",     "mov.b @Rm+,Rn",            0b0110000000000100, (SHCPU cpu, int m, int n) {
         cpu.R[n] = cpu.read!ubyte(cpu.R[m]);
-        if ((cpu.R[n] & 0x80) == 0)
-            cpu.R[n] &= 0x000000FF;
-        else
-            cpu.R[n] |= 0xFFFFFF00;
-
         if (n != m)
             cpu.R[m] += 1;
 
@@ -117,11 +102,6 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpN4M4!("MOVWP",     "mov.w @Rm+,Rn",            0b0110000000000101, (SHCPU cpu, int m, int n) {
         cpu.R[n] = cpu.read!ushort(cpu.R[m]);
-        if ((cpu.R[n] & 0x80) == 0)
-            cpu.R[n] &= 0x0000FFFF;
-        else
-            cpu.R[n] |= 0xFFFF0000;
-
         if (n != m)
             cpu.R[m] += 1;
         
@@ -152,21 +132,11 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     OpM4D4!("MOVBL4",    "mov.b @(disp,Rm),r0",      0b1000010000000000, (SHCPU cpu, int m, int d) {
         int disp = cast(int)(0x0000000F & d);
         cpu.R[0] = cpu.read!ubyte(cpu.R[m] + disp);
-        if ((cpu.R[0] & 0x80) == 0)
-            cpu.R[0] &= 0x000000FF;
-        else
-            cpu.R[0] |= 0xFFFFFF00;
-
         cpu.PC += 2;
     }),
     OpM4D4!("MOVWL4",    "mov.w @(disp,Rm),r0",      0b1000010100000000, (SHCPU cpu, int m, int d) {
         int disp = cast(int)(0x0000000F & d);
         cpu.R[0] = cpu.read!ushort(cpu.R[m] + (disp << 1));
-        if ((cpu.R[0] & 0x80) == 0)
-            cpu.R[0] &= 0x0000FFFF;
-        else
-            cpu.R[0] |= 0xFFFF0000;
-
         cpu.PC += 2;
     }),
     OpN4M4D4!("MOVLL4",  "mov.l @(disp,Rm),Rn",      0b0101000000000000, (SHCPU cpu, int m, int d, int n) {
@@ -191,20 +161,10 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpN4M4!("MOVBL0",    "mov.b @(r0,Rm),Rn",        0b0000000000001100, (SHCPU cpu, int m, int n) {
         cpu.R[n] = cpu.read!ubyte(cpu.R[m] + cpu.R[0]);
-        if ((cpu.R[n] & 0x80) == 0)
-            cpu.R[n] &= 0x000000FF;
-        else
-            cpu.R[n] |= 0xFFFFFF00;
-
         cpu.PC += 2;
     }),
     OpN4M4!("MOVWL0",    "mov.w @(r0,Rm),Rn",        0b0000000000001101, (SHCPU cpu, int m, int n) {
         cpu.R[n] = cpu.read!ushort(cpu.R[m] + cpu.R[0]);
-        if ((cpu.R[n] & 0x80) == 0)
-            cpu.R[n] &= 0x0000FFFF;
-        else
-            cpu.R[n] |= 0xFFFF0000;
-
         cpu.PC += 2;
     }),
     OpN4M4!("MOVLL0",    "mov.l @(r0,Rm),Rn",        0b0000000000001110, (SHCPU cpu, int m, int n) {
@@ -226,21 +186,11 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     OpD8!("MOVBLG",      "mov.b @(disp,gbr),r0",     0b1100010000000000, (SHCPU cpu, int d) {
         int disp = cast(int)(0x000000FF & d);
         cpu.R[0] = cpu.read!ubyte(cpu.GBR + disp);
-        if ((cpu.R[0] & 0x80) == 0)
-            cpu.R[0] &= 0x000000FF;
-        else
-            cpu.R[0] |= 0xFFFFFF00;
-
         cpu.PC += 2;
     }),
     OpD8!("MOVWLG",      "mov.w @(disp,gbr),r0",     0b1100010100000000, (SHCPU cpu, int d) {
         int disp = cast(int)(0x000000FF & d);
         cpu.R[0] = cpu.read!ushort(cpu.GBR + (disp << 1));
-        if ((cpu.R[0] & 0x80) == 0)
-            cpu.R[0] &= 0x0000FFFF;
-        else
-            cpu.R[0] |= 0xFFFF0000;
-
         cpu.PC += 2;
     }),
     OpD8!("MOVLLG",      "mov.l @(disp,gbr),r0",     0b1100011000000000, (SHCPU cpu, int d) {
@@ -329,11 +279,11 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpI8!("CMPIM",       "cmp/eq #imm,r0",           0b1000100000000000, (SHCPU cpu, int i) {
-        long imm;
-        if ((i & 0x80) == 0)
-            imm = (0x000000FF & i);
+        int imm;
+        if ((cast(uint)i & 0x80) == 0)
+            imm = (0x000000FFU & cast(uint)i);
         else
-            imm = (0xFFFFFF00 | i);
+            imm = (0xFFFFFF00U | cast(uint)i);
 
         cpu.T = cpu.R[0] == imm;
         cpu.PC += 2;
@@ -377,8 +327,8 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("DIV0S",     "div0s Rm,Rn",              0b0010000000000111, (SHCPU cpu, int m, int n) {
-        cpu.M = ((cpu.R[m] & 0x80000000) != 0);
-        cpu.Q = ((cpu.R[n] & 0x80000000) != 0);
+        cpu.M = ((cast(uint)cpu.R[m] & 0x80000000) != 0);
+        cpu.Q = ((cast(uint)cpu.R[n] & 0x80000000) != 0);
         cpu.T = !(cpu.M == cpu.Q);
         cpu.PC += 2;
     }),
@@ -396,7 +346,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         ubyte T = cpu.T;
 
         old_q = Q;
-        Q = (0x80000000 & cpu.R[n]) != 0;
+        Q = (0x80000000U & cast(uint)cpu.R[n]) != 0;
         tmp2 = cpu.R[m];
         cpu.R[n] <<= 1;
         cpu.R[n] |= cast(uint)T;
@@ -434,9 +384,15 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("DMULS",     "dmuls.l Rm,Rn",            0b0011000000001101, (SHCPU cpu, int m, int n) {
+        long result = cast(long)m * cast(long)n;
+        cpu.MACL = cast(int)(result >> 32);
+        cpu.MACH = cast(int)(result & 0xFFFFFFFF);
         cpu.PC += 2;
     }),
     OpN4M4!("DMULU",     "dmulu.l Rm,Rn",            0b0011000000000101, (SHCPU cpu, int m, int n) {
+        ulong result = cast(ulong)m * cast(ulong)n;
+        cpu.MACL = cast(uint)(result >> 32);
+        cpu.MACH = cast(uint)(result & 0xFFFFFFFF);
         cpu.PC += 2;
     }),
     OpN4!("DT",          "dt Rn",                    0b0100000000010000, (SHCPU cpu, int n) {
@@ -576,11 +532,11 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("TST",       "tst Rm,Rn",                0b0010000000001000, (SHCPU cpu, int m, int n) {
-        cpu.T = (cpu.R[n] & cpu.R[m]) == 0;
+        cpu.T = (cast(uint)cpu.R[n] & cast(uint)cpu.R[m]) == 0;
         cpu.PC += 2;
     }),
-    OpI8!("TSTI",        "and #imm,Rn",              0b1100100000000000, (SHCPU cpu, int i) {
-        cpu.T = (cpu.R[0] & (0x000000FF & i)) == 0;
+    OpI8!("TSTI",        "and #imm,R0",              0b1100100000000000, (SHCPU cpu, int i) {
+        cpu.T = (cast(uint)cpu.R[0] & (0x000000FFU & i)) == 0;
         cpu.PC += 2;
     }),
     OpI8!("TSTM",        "and.b #imm,@(r0,gbr)",     0b1100110000000000, (SHCPU cpu, int i) {
@@ -612,7 +568,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     //
 
     OpN4!("ROTCL",       "rotcl Rn",                 0b0100000000100100, (SHCPU cpu, int n) {
-        ubyte tmp = (cpu.R[n] & 0x80000000) != 0;
+        ubyte tmp = (cast(uint)cpu.R[n] & 0x80000000) != 0;
         cpu.R[n] <<= 1;
 
         if (cpu.T)
@@ -625,7 +581,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4!("ROTCR",       "rotcr Rn",                 0b0100000000100101, (SHCPU cpu, int n) {
-        ubyte tmp = (cpu.R[n] & 0x00000001) != 0;
+        ubyte tmp = (cast(uint)cpu.R[n] & 0x00000001) != 0;
         cpu.R[n] >>= 1;
         if (cpu.T)
             cpu.R[n] |= 0x80000000;
@@ -637,7 +593,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4!("ROTL",        "rotl Rn",                  0b0100000000000100, (SHCPU cpu, int n) {
-        cpu.T = (cpu.R[n] & 0x80000000) != 0;
+        cpu.T = (cast(uint)cpu.R[n] & 0x80000000) != 0;
         cpu.R[n] <<= 1;
 
         if (cpu.T)
@@ -648,7 +604,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4!("ROTR",        "rotr Rn",                  0b0100000000000101, (SHCPU cpu, int n) {
-        cpu.T = (cpu.R[n] & 0x00000001) != 0;
+        cpu.T = (cast(uint)cpu.R[n] & 0x00000001) != 0;
         cpu.R[n] >>= 1;
         if (cpu.T)
             cpu.R[n] |= 0x80000000;
@@ -658,18 +614,18 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4!("SHAL",        "shal Rn",                  0b0100000000100000, (SHCPU cpu, int n) {
-        cpu.T = (cpu.R[n] & 0x80000000) != 0;
+        cpu.T = (cast(uint)cpu.R[n] & 0x80000000) != 0;
         cpu.R[n] <<= 1;
 
         cpu.PC += 2;
     }),
     OpN4!("SHAR",        "shar Rn",                  0b0100000000100001, (SHCPU cpu, int n) {
-        cpu.T = (cpu.R[n] & 0x00000001) != 0;
+        cpu.T = (cast(uint)cpu.R[n] & 0x00000001) != 0;
         cpu.R[n] >>= 1;
         cpu.PC += 2;
     }),
     OpN4!("SHLL",        "shll Rn",                  0b0100000000000000, (SHCPU cpu, int n) {
-        cpu.T = (cpu.R[n] & 0x80000000) != 0;
+        cpu.T = (cast(uint)cpu.R[n] & 0x80000000) != 0;
         cpu.R[n] <<= 1;
 
         cpu.PC += 2;
@@ -687,23 +643,23 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4!("SHLR",        "shlr Rn",                  0b0100000000000001, (SHCPU cpu, int n) {
-        cpu.T = (cpu.R[n] & 0x80000000) != 0;
-        cpu.R[n] >>= 1;
+        cpu.T = (cast(uint)cpu.R[n] & 0x80000000) != 0;
+        cpu.R[n] >>>= 1;
         cpu.R[n] &= 0x7FFFFFFF;
         cpu.PC += 2;
     }),
     OpN4!("SHLR2",       "shlr2 Rn",                 0b0100000000001001, (SHCPU cpu, int n) {
-        cpu.R[n] >>= 2;
+        cpu.R[n] >>>= 2;
         cpu.R[n] &= 0x3FFFFFFF;
         cpu.PC += 2;
     }),
     OpN4!("SHLR8",       "shlr8 Rn",                 0b0100000000011001, (SHCPU cpu, int n) {
-        cpu.R[n] >>= 8;
+        cpu.R[n] >>>= 8;
         cpu.R[n] &= 0x00FFFFFF;
         cpu.PC += 2;
     }),
     OpN4!("SHLR16",      "shlr16 Rn",                0b0100000000101001, (SHCPU cpu, int n) {
-        cpu.R[n] >>= 16;
+        cpu.R[n] >>>= 16;
         cpu.R[n] &= 0x0000FFFF;
         cpu.PC += 2;
     }),
@@ -715,7 +671,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     //                                          Branch Instructions
     //
     OpD8!("BF",          "bf @(disp,pc)",            0b1000101100000000, (SHCPU cpu, int d) {
-        int disp =  (d & 0x80) == 0 ? 
+        int disp =  (cast(uint)d & 0x80) == 0 ? 
                     (0x000000FF & d) : 
                     (0xFFFFFF00 | d);
 
@@ -725,7 +681,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpD8!("BFS",         "bf/s @(disp,pc)",          0b1000111100000000, (SHCPU cpu, int d) {
         int tmp = cpu.PC;
-        int disp =  (d & 0x80) == 0 ? 
+        int disp =  (cast(uint)d & 0x80) == 0 ? 
                     (0x000000FF & d) : 
                     (0xFFFFFF00 | d);
 
@@ -736,7 +692,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.delaySlot(tmp+2);
     }),
     OpD8!("BT",          "bt @(disp,pc)",            0b1000100100000000, (SHCPU cpu, int d) {
-        int disp =  (d & 0x80) == 0 ? 
+        int disp =  (cast(uint)d & 0x80) == 0 ? 
                     (0x000000FF & d) : 
                     (0xFFFFFF00 | d);
 
@@ -746,7 +702,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpD8!("BTS",         "bt/s @(disp,pc)",          0b1000110100000000, (SHCPU cpu, int d) {
         int tmp = cpu.PC;
-        int disp =  (d & 0x80) == 0 ? 
+        int disp =  (cast(uint)d & 0x80) == 0 ? 
                     (0x000000FF & d) : 
                     (0xFFFFFF00 | d);
         
@@ -758,7 +714,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpD12!("BRA",        "bra @(disp,pc)",           0b1010000000000000, (SHCPU cpu, int d) {
         int tmp = cpu.PC;
-        int disp =  (d & 0x800) == 0 ? 
+        int disp =  (cast(uint)d & 0x800) == 0 ? 
                     (0x00000FFF & d) : 
                     (0xFFFFF000 | d);
         
@@ -772,7 +728,7 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpD12!("BSR",        "bsr @(disp,pc)",           0b1011000000000000, (SHCPU cpu, int d) {
         int tmp = cpu.PC;
-        int disp =  (d & 0x800) == 0 ? 
+        int disp =  (cast(uint)d & 0x800) == 0 ? 
                     (0x00000FFF & d) : 
                     (0xFFFFF000 | d);
         

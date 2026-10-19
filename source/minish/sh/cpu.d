@@ -8,13 +8,40 @@ import minish.core.endian;
 public import minish.sh.cpus;
 
 /// Bit offset of the T bit.
-enum SH_T_BIT = 1;
+enum SH_T_BIT = 0;
+
+/// Bit offset of the S bit.
+enum SH_S_BIT = 1;
 
 /// Bit offset of the Q bit.
 enum SH_Q_BIT = 8;
 
 /// Bit offset of the M bit.
 enum SH_M_BIT = 9;
+
+/// Bit offset of the RM bit.
+enum SH_RM_BIT = 0;
+
+/// Bit offset of the FZ bit.
+enum SH_FZ_BIT = 5;
+
+/// Bit offset of the FV bit.
+enum SH_FV_BIT = 6;
+
+/// Bit offset of the EZ bit.
+enum SH_EZ_BIT = 10;
+
+/// Bit offset of the EV bit.
+enum SH_EV_BIT = 11;
+
+/// Bit offset of the PR bit.
+enum SH_PR_BIT = 19;
+
+/// Bit offset of the SZ bit.
+enum SH_SZ_BIT = 20;
+
+/// Bit offset of the FR bit.
+enum SH_FR_BIT = 21;
 
 struct CPUInfo {
 	string name;
@@ -61,8 +88,11 @@ public:
 	/// Saved Status Register
 	uint SSR;
 
-	/// Floating Point Status Register
-	uint FPSCR;
+    /// Floating Point Status Register
+    uint FPSCR;
+
+    /// Floating Point Exchange Register
+    uint FPUL;
 
 	/// Global Base Register
 	uint GBR;
@@ -110,6 +140,22 @@ public:
 	@property ubyte Q() => getbit!SH_Q_BIT(SR);
 	@property void Q(ubyte value) => setbit!SH_Q_BIT(SR, value);
 
+	/// The status register's S bit.
+	@property ubyte S() => getbit!SH_S_BIT(SR);
+	@property void S(ubyte value) => setbit!SH_S_BIT(SR, value);
+
+    /// The FPSCR register's PR bit.
+    @property ubyte FP_PR() => getbit!SH_PR_BIT(FPSCR);
+    @property void FP_PR(ubyte value) => setbit!SH_PR_BIT(FPSCR, value);
+
+    /// The FPSCR register's SZ bit.
+    @property ubyte FP_SZ() => getbit!SH_SZ_BIT(FPSCR);
+    @property void FP_SZ(ubyte value) => setbit!SH_SZ_BIT(FPSCR, value);
+
+    /// The FPSCR register's FR bit.
+    @property ubyte FP_FR() => getbit!SH_FR_BIT(FPSCR);
+    @property void FP_FR(ubyte value) => setbit!SH_FR_BIT(FPSCR, value);
+
 	/**
 		Whether the processor is little endian.
 	*/
@@ -119,34 +165,6 @@ public:
 		Whether the delay slot is filled.
 	*/
 	@property bool isDelaySlotFilled() => iqueue.length > 1;
-
-
-	/**
-		Reads value at given address if possible.
-
-		Params:
-			addr = The address to read from.
-
-		Returns:
-			The value at that address or $(D T.init).
-	*/
-	T read(T)(uint addr) {
-		if (auto v = memory.read(addr, T.sizeof))
-			return (cast(T[])v)[0].toNativeEndian(shle);
-		return T.init;
-	}
-
-	/**
-		Writes the value to the given address.
-
-		Params:
-			addr = 	The address to write to.
-			value =	The value to write.
-	*/
-	void write(T, Y)(uint addr, Y value) {
-		Y[1] v = [value.toOtherEndian(shle)];
-		memory.write(addr, v[0..$]);
-	}
 
 	/**
 		Adds the given address to the delay slot.
@@ -223,6 +241,18 @@ public:
 	override ref float FPR(ubyte i) {
 		throw new Exception("Not implemented.");
 	}
+
+    // Gets banked FR register
+    ref float FS(int i) { throw new Exception("Not implemented."); }
+
+    // Gets banked XF register
+    ref float XS(int i) { throw new Exception("Not implemented."); }
+
+    // Gets banked DR register
+    ref double FD(int i) { throw new Exception("Not implemented."); }
+
+    // Gets banked XD register
+    ref double XD(int i) { throw new Exception("Not implemented."); }
 }
 
 /**

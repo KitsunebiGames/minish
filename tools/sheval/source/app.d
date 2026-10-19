@@ -25,6 +25,7 @@ int main(string[] args) {
 		.add(new Option("e", "entry", "The program's entry point").defaultValue("start"))
 		.add(new Option(null, "memory", "Size of the address space").defaultValue("16 MiB"))
 		.add(new Argument("path", "Path to ELF file to execute"))
+		.add(new Flag("v", "verbose", "Verbose mode"))
 		.parse(args);
 
 	Module mod = Module.load(pargs.arg("path"));
@@ -43,6 +44,13 @@ int main(string[] args) {
 
 	cpu.GPR(15) = 0x0000FFFF;
 	cpu.load(mod);
-	writeln(cast(int)cpu.eval(entry.vaddr)[0]);
+
+	if (pargs.occurencesOf("verbose") > 0) {
+		foreach(val; cpu.eval(entry.vaddr)) {
+			writeln(cast(int)val);
+		}
+	} else {
+		writeln(cast(int)cpu.eval(entry.vaddr)[0]);
+	}
 	return 0;
 }

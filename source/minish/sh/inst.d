@@ -85,6 +85,38 @@ template OpN4M4(string name, string asmstr, ushort opcode, void function(SHCPU c
     alias OpN4M4 = __INSTR;
 }
 
+template OpM4N3(string name, string asmstr, ushort opcode, void function(SHCPU cpu, int m, int n) op) {
+    
+    pragma(mangle, "SH_INSTR_"~name)
+    __gshared const immutable(SHInst) __INSTR = SHInst(
+        name,
+        opcode,
+        0b11110000_10001111u,
+        (SHCPU cpu, ushort opcode) {
+            int m = (opcode >> 8)&0x0F;
+            int n = (opcode >> 4)&0x07;
+            op(cpu, m, n);
+        }
+    );
+    alias OpM4N3 = __INSTR;
+}
+
+template OpN4M3(string name, string asmstr, ushort opcode, void function(SHCPU cpu, int m, int n) op) {
+    
+    pragma(mangle, "SH_INSTR_"~name)
+    __gshared const immutable(SHInst) __INSTR = SHInst(
+        name,
+        opcode,
+        0b11110000_10001111u,
+        (SHCPU cpu, ushort opcode) {
+            int n = (opcode >> 8)&0x0F;
+            int m = (opcode >> 4)&0x07;
+            op(cpu, m, n);
+        }
+    );
+    alias OpN4M3 = __INSTR;
+}
+
 template OpN4I8(string name, string asmstr, ushort opcode, void function(SHCPU cpu, int i, int n) op) {
     
     pragma(mangle, "SH_INSTR_"~name)

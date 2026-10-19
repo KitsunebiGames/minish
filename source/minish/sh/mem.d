@@ -14,9 +14,6 @@ class SHMemory : MemoryController {
 private:
 	ubyte[] memory;
 
-	// 64 megabytes of control register data
-	ubyte[67_108_863] ctrlregs;
-
 	uint toP0Area(uint addr) {
 		if (addr >= P4ADDR)
 			return P4ADDR-addr;
@@ -44,10 +41,6 @@ private:
 
 	uint translateAddr(uint addr) { return toP0Area(addr) % memory.length; }
 	void* getAddress(uint addr) {
-
-		// Control Registers
-		if (addr >= 0xFC000000)
-			return cast(void*)&ctrlregs[addr-0xFC000000];
 
 		// Translate from P1+ to P0 area.
 		addr = translateAddr(addr);

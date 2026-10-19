@@ -53,6 +53,34 @@ protected:
 
 public:
 
+
+	/**
+		Reads value at given address if possible.
+
+		Params:
+			addr = The address to read from.
+
+		Returns:
+			The value at that address or $(D T.init).
+	*/
+	T read(T)(uint addr) {
+		if (auto v = memory.read(addr, T.sizeof))
+			return (cast(T[])v)[0].toNativeEndian(isLittleEndian);
+		return T.init;
+	}
+
+	/**
+		Writes the value to the given address.
+
+		Params:
+			addr = 	The address to write to.
+			value =	The value to write.
+	*/
+	void write(T, Y)(uint addr, Y value) {
+		Y[1] v = [value.toOtherEndian(isLittleEndian)];
+		memory.write(addr, v[0..$]);
+	}
+
 	/**
 		The memory attached to the CPU.
 	*/
