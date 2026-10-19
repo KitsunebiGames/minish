@@ -322,12 +322,10 @@ __gshared const immutable(SHInst)[] SH2Inst = [
     }),
     OpN4M4!("CMPSTR",    "cmp/str Rm,Rn",            0b0010000000001100, (SHCPU cpu, int m, int n) {
         int tmp = cpu.R[n] ^ cpu.R[m];
-        cpu.T = !(
-            ((tmp >>> 24) & 0xFF) &
-            ((tmp >>> 16) & 0xFF) &
-            ((tmp >>> 8) & 0xFF) &
-            ((tmp) & 0xFF)
-        );
+        cpu.T = ((tmp >>> 24) & 0xFF) == 0 ||
+                ((tmp >>> 16) & 0xFF) == 0 ||
+                ((tmp >>> 8) & 0xFF) == 0 ||
+                (tmp & 0xFF) == 0;
         cpu.PC += 2;
     }),
     OpN4M4!("DIV0S",     "div0s Rm,Rn",              0b0010000000000111, (SHCPU cpu, int m, int n) {
@@ -388,15 +386,15 @@ __gshared const immutable(SHInst)[] SH2Inst = [
         cpu.PC += 2;
     }),
     OpN4M4!("DMULS",     "dmuls.l Rm,Rn",            0b0011000000001101, (SHCPU cpu, int m, int n) {
-        long result = cast(long)m * cast(long)n;
-        cpu.MACL = cast(int)(result >> 32);
-        cpu.MACH = cast(int)(result & 0xFFFFFFFF);
+        long result = cast(long)cpu.R[m] * cast(long)cpu.R[n];
+        cpu.MACL = cast(uint)result;
+        cpu.MACH = cast(uint)(result >> 32);
         cpu.PC += 2;
     }),
     OpN4M4!("DMULU",     "dmulu.l Rm,Rn",            0b0011000000000101, (SHCPU cpu, int m, int n) {
-        ulong result = cast(ulong)m * cast(ulong)n;
-        cpu.MACL = cast(uint)(result >> 32);
-        cpu.MACH = cast(uint)(result & 0xFFFFFFFF);
+        ulong result = cast(ulong)(cast(uint)cpu.R[m]) * cast(ulong)(cast(uint)cpu.R[n]);
+        cpu.MACL = cast(uint)result;
+        cpu.MACH = cast(uint)(result >> 32);
         cpu.PC += 2;
     }),
     OpN4!("DT",          "dt Rn",                    0b0100000000010000, (SHCPU cpu, int n) {
